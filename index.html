@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <link rel="stylesheet" href="styles.css">
+  <title>Quiz Project</title>
+</head>
+<body class="light-theme">
+  <header>
+    <h1>Quiz Application</h1>
+    <div class="theme-toggle">
+      <label class="theme-label" for="themeSwitch">Dark Mode</label>
+      <input type="checkbox" id="themeSwitch">
+      <span class="slider"></span>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="question-input">
+      <h2 class="title">Add Your Question</h2>
+      <form class="question-form">
+        <textarea class="question" placeholder="Enter your question"></textarea>
+        <div class="option">
+          <p>1.</p><input type="text" class="option1" placeholder="Option 1"><br>
+          <p>2.</p><input type="text" class="option2" placeholder="Option 2"><br>
+          <p>3.</p><input type="text" class="option3" placeholder="Option 3"><br>
+          <p>4.</p><input type="text" class="option4" placeholder="Option 4">
+        </div>
+        <label for="answer">Answer (1-4):</label>
+        <input type="number" id="answer" min="1" max="4" maxlength="1">
+        <button type="button" class="add-question">Add Question</button>
+      </form>
+    </div>
+
+    <div class="questions">
+      <div>
+      </div>
+    </div>
+
+    <div class="exam" style="display: none;">
+      <div class="timer">
+        <p id="timer" class="red-text"></p>
+      </div>
+      <div class="exam-questions"></div>
+      <button type="button" class="submit-exam">Submit Exam</button>
+    </div>
+
+    <div class="result" style="display: none;">
+      <h2>Your Score</h2>
+      <p class="score"></p>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>
