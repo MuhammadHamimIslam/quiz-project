@@ -1,9 +1,15 @@
 // DOM Elements
-const questionInput = document.querySelector('.question');
-const optionsInputs = document.querySelectorAll('.option input[type="text"]');
-const answerInput = document.getElementById('answer');
-const addQuestionBtn = document.querySelector('.add-question');
-const questionsContainer = document.querySelector('.questions');
+const questionInput = document.getElementById('questionText');
+const optionInputs = [
+  document.getElementById('option1'),
+  document.getElementById('option2'),
+  document.getElementById('option3'),
+  document.getElementById('option4')
+];
+const correctAnswerInput = document.getElementById('correctAnswer');
+const addQuestionBtn = document.querySelector('.add');
+const startExamBtn = document.querySelector('.start');
+const questionsContainer = document.querySelector('.questions div');
 const examSection = document.querySelector('.exam');
 const examQuestionsContainer = document.querySelector('.exam-questions');
 const resultSection = document.querySelector('.result');
@@ -11,182 +17,204 @@ const scoreDisplay = document.querySelector('.score');
 const timerDisplay = document.getElementById('timer');
 const submitExamBtn = document.querySelector('.submit-exam');
 const themeSwitch = document.getElementById('themeSwitch');
-
+const progressBar = document.querySelector('.progress-bar');
+const difficultySelector = document.getElementById('difficulty');
+const OtherErr = document.querySelector('.other-error');
+const QuestionErr = document.querySelector('.error-question');
+const OptErr = document.querySelector('.error-options');
+const AnswerErr = document.querySelector('.error-answer');
 let questions = [];
 let timer;
-const maxQuestions = 5;
-const timeLimit = 120; // 2 minutes
+let timeLimit = 120; // Default 2 minutes based on Medium difficulty
 
-// Add question function
-function addQuestion() {
-  const questionText = questionInput.value.trim();
-  const options = Array.from(optionsInputs).map(input => input.value.trim());
-  const correctAnswer = parseInt(answerInput.value.trim());
-
-  // Validate inputs
-  if (validateInputs(questionText, options, correctAnswer)) {
-    const question = {
-      questionText,
-      options,
-      correctAnswer,
-    };
-    questions.push(question);
-
-    // Clear inputs and error messages
-    clearInputs();
-
-    // Start exam if max questions reached
-    if (questions.length === maxQuestions) {
-      startExam();
-    }
+// Adjust time limit based on difficulty
+difficultySelector.addEventListener('change', (e) => {
+  const difficulty = e.target.value;
+  if (difficulty === 'easy') {
+    timeLimit = 180; // 3 minutes
+  } else if (difficulty === 'medium') {
+    timeLimit = 120; // 2 minutes
+  } else if (difficulty === 'hard') {
+    timeLimit = 60; // 1 minute
   }
-}
+});
 
-// Validate inputs function
-function validateInputs(questionText, options, correctAnswer) {
+// Add question function with error handling
+const addQuestion = (event) => {
+  event.preventDefault();
+  // Clear previous error messages
+  QuestionErr.textContent = '';
+  OptErr.textContent = '';
+  AnswerErr.textContent = '';
+  OtherErr.textContent = '';
+
+  const questionText = questionInput.value.trim();
+  const options = optionInputs.map(input => input.value.trim());
+  const correctAnswer = parseInt(correctAnswerInput.value.trim(), 10);
+
   let isValid = true;
 
-  // Clear previous error messages
-  clearErrorMessages();
-
-  // Validate question text
-  if (!questionText) {
-    displayError('Question cannot be empty.', questionInput);
+  if (!isNonEmpty(questionText)) {
+    QuestionErr.textContent = 'Please add a question.';
     isValid = false;
   }
 
-  // Validate options
-  optionsInputs.forEach((input, index) => {
-    if (!options[index]) {
-      displayError(`Option ${index + 1} cannot be empty.`, input);
-      isValid = false;
-    }
-  });
-
-  // Validate correct answer
-  if (isNaN(correctAnswer) || correctAnswer < 1 || correctAnswer > 4) {
-    displayError('Answer must be a number between 1 and 4.', answerInput);
+  if (!options.every(isNonEmpty)) {
+    OptErr.textContent = 'Make sure you added all options correctly.';
     isValid = false;
   }
 
-  return isValid;
-}
+  if (!(correctAnswer >= 1 && correctAnswer <= 4)) {
+    AnswerErr.textContent = "Please enter a valid answer between 1 and 4.";
+    isValid = false;
+  }
 
-// Display error function
-function displayError(message, element) {
-  const errorElement = document.createElement('p');
-  errorElement.classList.add('error-message');
-  errorElement.textContent = message;
-  element.parentElement.appendChild(errorElement);
-}
+  if (isValid) {
+    questions.push({ questionText, options, correctAnswer });
+    clearInputs();
+    updateProgressBar();
+  }
+};
 
-// Clear error messages function
-function clearErrorMessages() {
-  const errorMessages = document.querySelectorAll('.error-message');
-  errorMessages.forEach(msg => msg.remove());
-}
+// Helper function to check if a string is non-empty
+const isNonEmpty = (str) => str.length > 0;
 
-// Clear input fields function
-function clearInputs() {
+// Clear inputs
+const clearInputs = () => {
   questionInput.value = '';
-  optionsInputs.forEach(input => input.value = '');
-  answerInput.value = '';
-}
+  optionInputs.forEach(input => input.value = '');
+  correctAnswerInput.value = '';
+};
 
-// Start exam function
-function startExam() {
+// Start exam
+const startExam = () => {
+  if (questions.length === 0) {
+    OtherErr.textContent = 'Please add some questions before starting the exam';
+    return;
+  }
+
   document.querySelector('.question-input').style.display = 'none';
   examSection.style.display = 'block';
+  examSection.classList.add('fade-in'); // Add fade-in animation
 
-  displayExamQuestions();
-  startTimer();
-}
-
-// Display exam questions function
-function displayExamQuestions() {
-  examQuestionsContainer.innerHTML = '';
-  questions.forEach((question, index) => {
-    const questionItem = document.createElement('div');
-    questionItem.classList.add('question-item');
-    questionItem.innerHTML = `
-      <h3>${index + 1}. ${question.questionText}</h3>
-      ${question.options.map((option, optIndex) => `
+  examQuestionsContainer.innerHTML = questions.map((q, i) => `
+    <div class="question-item fade-in">
+      <p>${i + 1}. ${q.questionText}</p>
+      ${q.options.map((option, index) => `
         <div class="option-item">
-          <input type="radio" name="question${index}" id="question${index}option${optIndex + 1}" value="${optIndex + 1}">
-          <label for="question${index}option${optIndex + 1}">${option}</label>
+          <input type="radio" name="question${i}" id="option${index}${i}" value="${index + 1}">
+          <label for="option${index}${i}">${option}</label>
         </div>
       `).join('')}
-    `;
-    examQuestionsContainer.appendChild(questionItem);
+    </div>
+  `).join('');
 
-    // Add event listener to disable options after selection
-    const options = document.querySelectorAll(`input[name="question${index}"]`);
+  // Attach event listeners to disable radio buttons after selection
+  questions.forEach((_, i) => {
+    const options = document.querySelectorAll(`input[name="question${i}"]`);
     options.forEach(option => {
       option.addEventListener('change', () => {
-        disableOptions(index);
+        options.forEach(opt => opt.disabled = true);
       });
     });
   });
-}
 
-// Function to handle disabling options after a choice is made
-function disableOptions(questionIndex) {
-  const options = document.querySelectorAll(`input[name="question${questionIndex}"]`);
-  options.forEach(option => option.disabled = true);
-}
+  startTimer(timeLimit);
+};
+// Start timer
+const startTimer = (seconds) => {
+  let remainingTime = seconds;
+  timerDisplay.textContent = formatTime(remainingTime);
 
-// Start timer function
-function startTimer() {
-  let timeRemaining = timeLimit;
-  timerDisplay.textContent = formatTime(timeRemaining);
-  
   timer = setInterval(() => {
-    timeRemaining--;
-    timerDisplay.textContent = formatTime(timeRemaining);
+    remainingTime--;
+    timerDisplay.textContent = formatTime(remainingTime);
 
-    if (timeRemaining <= 0) {
+    if (remainingTime <= 0) {
       clearInterval(timer);
       submitExam();
     }
   }, 1000);
-}
+};
 
-// Format time for display function
-function formatTime(seconds) {
+// Format time for display
+const formatTime = (seconds) => {
   const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${minutes}:${secs < 10 ? '0' : ''}${secs}`;
-}
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
+};
 
-// Submit exam function
-submitExamBtn.addEventListener('click', submitExam);
-function submitExam() {
+// Submit exam
+const submitExam = () => {
   clearInterval(timer);
   let score = 0;
 
-  questions.forEach((question, index) => {
-    const selectedOption = document.querySelector(`input[name="question${index}"]:checked`);
-    if (selectedOption && parseInt(selectedOption.value) === question.correctAnswer) {
-      score += 2; // 2 points for each correct answer
+  questions.forEach((question, i) => {
+    const selectedAnswer = document.querySelector(`input[name="question${i}"]:checked`);
+    const correctLabel = document.querySelector(`#option${question.correctAnswer - 1}${i} + label`);
+
+    // Show checkmark next to correct answers
+    if (correctLabel) {
+      correctLabel.textContent += " ✓";
+    }
+
+    // Disable all options after submission
+    const allOptions = document.querySelectorAll(`input[name="question${i}"]`);
+    allOptions.forEach(option => option.disabled = true);
+
+    if (selectedAnswer && parseInt(selectedAnswer.value, 10) === question.correctAnswer) {
+      score++;
     }
   });
 
   displayResult(score);
-}
+};
 
-// Display result function
-function displayResult(score) {
-  examSection.style.display = 'none';
+// Display result and feedback
+const displayResult = (score) => {
   resultSection.style.display = 'block';
-  scoreDisplay.textContent = `You scored ${score} out of ${questions.length * 2}`;
-}
+  scoreDisplay.textContent = `You scored ${score} out of ${questions.length}`;
 
-// Theme toggling function
-themeSwitch.addEventListener('change', () => {
-  document.body.classList.toggle('dark-theme');
-  document.body.classList.toggle('light-theme');
-  document.querySelector('.theme-label').textContent = document.body.classList.contains('dark-theme') ? 'Dark Mode' : 'Light Mode';
-});
+  // Display feedback for each question
+  questions.forEach((question, i) => {
+    const selectedAnswer = document.querySelector(`input[name="question${i}"]:checked`);
+    selectedAnswer.setAttribute('disabled', 'true');
+    const feedbackElement = document.createElement('p');
+    feedbackElement.classList.add('feedback');
 
-// Event listener for adding questions
+    if (selectedAnswer) {
+      const answerValue = parseInt(selectedAnswer.value, 10);
+      if (answerValue === question.correctAnswer) {
+        feedbackElement.textContent = "Correct!";
+        feedbackElement.classList.add('correct');
+      } else {
+        feedbackElement.textContent = "Incorrect!";
+        feedbackElement.classList.add('incorrect');
+      }
+    }
+
+    const questionItem = document.querySelector(`.question-item:nth-child(${i + 1})`);
+    if (questionItem) {
+      questionItem.appendChild(feedbackElement);
+    }
+  });
+
+  timerDisplay.style.display = 'none';
+  submitExamBtn.style.display = 'none';
+};
+
+// Update progress bar
+const updateProgressBar = () => {
+  const progressPercentage = (questions.length / 10) * 100; // Assuming 10 questions as max
+  progressBar.style.width = `${progressPercentage}%`;
+};
+
+// Event Listeners
 addQuestionBtn.addEventListener('click', addQuestion);
+startExamBtn.addEventListener('click', startExam);
+submitExamBtn.addEventListener('click', submitExam);
+
+// Theme toggle
+themeSwitch.addEventListener('change', (e) => {
+  document.body.classList.toggle('dark-theme');
+});
